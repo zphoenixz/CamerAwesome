@@ -1,5 +1,7 @@
 package com.apparence.camerawesome.cameraX
 
+import android.os.Handler
+import android.os.Looper
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -44,38 +46,40 @@ class CameraPermissions : EventChannel.StreamHandler, RequestPermissionsResultLi
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
     ): Boolean {
-        val grantedPermissions = mutableListOf<String>()
-        val deniedPermissions = mutableListOf<String>()
-        permissionGranted = true
-        for (i in permissions.indices) {
-            if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                grantedPermissions.add(permissions[i])
-            } else {
-                permissionGranted = false
-                deniedPermissions.add(permissions[i])
+        Handler(Looper.getMainLooper()).post {
+            val grantedPermissions = mutableListOf<String>()
+            val deniedPermissions = mutableListOf<String>()
+            permissionGranted = true
+            for (i in permissions.indices) {
+                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    grantedPermissions.add(permissions[i])
+                } else {
+                    permissionGranted = false
+                    deniedPermissions.add(permissions[i])
+                }
             }
-        }
-        val toRemove = mutableListOf<PermissionRequest>()
-        for (c in callbacks) {
-            if (c.permissionsAsked.containsAll(permissions.toList()) && permissions.toList()
-                    .containsAll(c.permissionsAsked)
-            ) {
-                c.callback(grantedPermissions, deniedPermissions)
-                toRemove.add(c)
+            val toRemove = mutableListOf<PermissionRequest>()
+            for (c in callbacks) {
+                if (c.permissionsAsked.containsAll(permissions.toList()) && permissions.toList()
+                        .containsAll(c.permissionsAsked)
+                ) {
+                    c.callback(grantedPermissions, deniedPermissions)
+                    toRemove.add(c)
+                }
             }
-        }
-        callbacks.removeAll(toRemove)
+            callbacks.removeAll(toRemove)
 
-        if (events != null) {
-            Log.d(
-                TAG,
-                "_onRequestPermissionsResult: granted " + java.lang.String.join(", ", *permissions)
-            )
-            events!!.success(permissionGranted)
-        } else {
-            Log.d(
-                TAG, "_onRequestPermissionsResult: received permissions but the EventSink is closed"
-            )
+            if (events != null) {
+                Log.d(
+                    TAG,
+                    "_onRequestPermissionsResult: granted " + java.lang.String.join(", ", *permissions)
+                )
+                events!!.success(permissionGranted)
+            } else {
+                Log.d(
+                    TAG, "_onRequestPermissionsResult: received permissions but the EventSink is closed"
+                )
+            }
         }
         return permissionGranted
     }
